@@ -1,0 +1,45 @@
+version: '3.8'
+volumes:
+  postgres-data:
+services:
+  test:
+    build:
+      target: dev
+    command: sh -c "npx prisma db push && npm run test"
+    environment:
+      NODE_ENV: "development"
+      DATABASE_URL: "postgresql://pafin:mysecretpassword@postgres:5432/challenge_test?schema=public"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - test
+
+  server:
+    build:
+      target: prod
+    command: sh -c "npx prisma db push && node dist/src/index.js"
+    environment:
+      DATABASE_URL: "postgresql://pafin:mysecretpassword@postgres:5432/challenge?schema=public"
+    ports:
+      - 3000:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - server
+   
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: "pafin"
+      POSTGRES_PASSWORD: "mysecretpassword"
+    ports:
+      - 5432:5432
+    logging:
+      driver: none
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
